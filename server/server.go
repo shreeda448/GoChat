@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"sort"
 	"strings"
 	"sync"
 )
@@ -99,6 +100,17 @@ func (c *Client) Drain() {
 	}
 }
 
+func (h *Hub) Users() []string {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	names := make([]string, 0, len(h.clients))
+	for name := range h.clients {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
 func handleOneClient(hub *Hub, cli net.Conn) {
 	defer cli.Close()
 	sc := bufio.NewScanner(cli)
@@ -120,6 +132,7 @@ func handleOneClient(hub *Hub, cli net.Conn) {
 	}
 	hub.Broadcast(c.username, fmt.Sprintf("%s has joined the chat", c.username))
 	go c.Drain()
+	c.deliver("online: " + strings.Join(hub.Users(), ", "))
 	defer hub.Broadcast(c.username, fmt.Sprintf("%s left the chat", c.username))
 	defer hub.UnRegister(c)
 	for sc.Scan() {
@@ -127,7 +140,8 @@ func handleOneClient(hub *Hub, cli net.Conn) {
 		if line == "" {
 			continue
 		}
-		if strings.HasPrefix(line, "/msg ") {
+		switch {
+		case strings.HasPrefix(line, "/msg "):
 			parts := strings.SplitN(line, " ", 3)
 			if len(parts) < 3 {
 				c.deliver("usage: /msg username message")
@@ -136,17 +150,9 @@ func handleOneClient(hub *Hub, cli net.Conn) {
 			if err := hub.Private(c.username, parts[1], parts[2]); err != nil {
 				c.deliver(err.Error())
 			}
-			continue
-		} else if strings.HasPrefix(line, "/users") {
-			hub.mu.Lock()
-			var sb strings.Builder
-			for k := range hub.clients {
-				fmt.Fprintf(&sb, "\n-%s", k)
-			}
-			listUsers := sb.String()
-			hub.mu.Unlock()
-			hub.Private("server", c.username, listUsers)
-		} else {
+		case line == "/users":
+			c.deliver("online: " + strings.Join(hub.Users(), ", "))
+		default:
 			hub.Broadcast(c.username, fmt.Sprintf("[%s] %s", c.username, line))
 		}
 	}
