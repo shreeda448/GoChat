@@ -137,6 +137,15 @@ func handleOneClient(hub *Hub, cli net.Conn) {
 				c.deliver(err.Error())
 			}
 			continue
+		} else if strings.HasPrefix(line, "/users") {
+			hub.mu.Lock()
+			var sb strings.Builder
+			for k := range hub.clients {
+				fmt.Fprintf(&sb, "\n-%s", k)
+			}
+			listUsers := sb.String()
+			hub.mu.Unlock()
+			hub.Private("server", c.username, listUsers)
 		} else {
 			hub.Broadcast(c.username, fmt.Sprintf("[%s] %s", c.username, line))
 		}

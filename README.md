@@ -12,3 +12,4 @@ It is a simple multi-client chat server written in Go
 - [x] Broadcast
 - [x] Private messages
 - [x] Join and leave notifications
+- [x] List active users
