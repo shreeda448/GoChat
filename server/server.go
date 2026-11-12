@@ -118,7 +118,9 @@ func handleOneClient(hub *Hub, cli net.Conn) {
 			fmt.Fprintln(cli, err)
 		}
 	}
+	hub.Broadcast(c.username, fmt.Sprintf("%s has joined the chat", c.username))
 	go c.Drain()
+	defer hub.Broadcast(c.username, fmt.Sprintf("%s left the chat", c.username))
 	defer hub.UnRegister(c)
 	for sc.Scan() {
 		line := strings.TrimSpace(sc.Text())
