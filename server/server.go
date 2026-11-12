@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	addr = "10.50.32.200:8080"
+	addr = "127.0.0.1:8080"
 )
 
 type Hub struct {
@@ -118,8 +118,8 @@ func handleOneClient(hub *Hub, cli net.Conn) {
 			fmt.Fprintln(cli, err)
 		}
 	}
-	defer hub.UnRegister(c)
 	go c.Drain()
+	defer hub.UnRegister(c)
 	for sc.Scan() {
 		line := strings.TrimSpace(sc.Text())
 		if line == "" {
